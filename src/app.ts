@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import productRoutes from "./routes/products.routes";
@@ -6,6 +6,7 @@ import swagger from "@fastify/swagger";
 import scalar from "@scalar/fastify-api-reference";
 import jwt from "@fastify/jwt";
 import authRoutes from "./routes/auth.routes";
+import { errorHandler } from "./middlewares/error.middleware";
 
 const fastify = Fastify({
   logger: true,
@@ -76,6 +77,8 @@ fastify.get("/health", async (request, reply) => {
     timestamp: new Date().toISOString(),
   };
 });
+
+fastify.setErrorHandler(errorHandler);
 
 // Run the server!
 fastify.listen({ port: 3000 }, function (err, address) {
