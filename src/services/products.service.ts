@@ -1,5 +1,5 @@
 import { prisma } from "../utils/prisma";
-import type { ProductFilters } from "../types";
+import type { CreateProduct, ProductFilters } from "../types";
 
 export const getProducts = async (filter: ProductFilters) => {
   const {
@@ -93,4 +93,20 @@ export const getProductById = async (id: number) => {
     console.error("Erro ao buscar produto por ID:", error);
     throw error;
   }
-}
+};
+
+export const createProduct = async (data: CreateProduct) => {
+  const existingProduct = await prisma.product.findUnique({
+    where: { slug: data.slug },
+  });
+
+  if (existingProduct) {
+    throw new Error("Slug já existe. Escolha outro nome para o produto.");
+  }
+
+  const newProduct = await prisma.product.create({
+    data,
+  });
+
+  return newProduct;
+};
