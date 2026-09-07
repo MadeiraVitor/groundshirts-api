@@ -51,3 +51,7 @@ export const updateProductSchema = z.object({
   images: z.array(z.string()).optional(),
   categoryId: z.coerce.number().int().optional(),
 });
+
+export const deleteProductSchema = z.object({
+  id: z.number().int().min(1, "ID é obrigatório"),
+});
