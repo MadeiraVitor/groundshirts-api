@@ -4,8 +4,8 @@ export interface ProductFilters {
   minPrice?: number;
   maxPrice?: number;
   search?: string;
-  sortBy?: 'price' | 'name' | 'createdAt';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "price" | "name" | "createdAt";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface AuthRequest {
@@ -16,4 +16,17 @@ export interface AuthRequest {
 export interface RegisterRequest extends AuthRequest {
   fullName: string;
   role?: "USER" | "ADMIN";
+}
+
+export interface CreateProduct {
+  name: string;
+  description: string;
+  price: number;
+  colors?: string[];
+  sizes?: string[];
+  slug: string;
+  stock: number;
+  active: boolean;
+  images?: string[];
+  categoryId: number;
 }
