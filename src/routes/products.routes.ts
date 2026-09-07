@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
-import { getProduct, listProducts } from "../controllers/products.controller";
+import { createNewProduct, getProduct, listProducts } from "../controllers/products.controller";
 import { authenticate } from "../middlewares/auth.middleware";
+import { CreateProduct } from "../types";
 
 export default async function productRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", authenticate);
@@ -165,5 +166,69 @@ export default async function productRoutes(fastify: FastifyInstance) {
       },
     },
     getProduct,
+  );
+
+  fastify.post<{ Body: CreateProduct }>(
+    "/",
+    {
+      // onRequest: [requireAdmin],
+      schema: {
+        tags: ["Products"],
+        description: "Cria um novo produto",
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            description: { type: "string" },
+            price: { type: "number" },
+            stock: { type: "number" },
+            sizes: {
+              type: "array",
+              items: { type: "string" },
+            },
+            images: {
+              type: "array",
+              items: { type: "string" },
+            },
+            colors: {
+              type: "array",
+              items: { type: "string" },
+            },
+            active: { type: "boolean" },
+            categoryId: { type: "number" },
+          },
+          required: [
+            "name",
+            "description",
+            "price",
+            "categoryId",
+          ],
+        },
+        response: {
+          201: {
+            description: "Produto criado com sucesso",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          400: {
+            description: "Requisição inválida",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          500: {
+            description: "Erro interno do servidor",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    createNewProduct,
   );
 }
