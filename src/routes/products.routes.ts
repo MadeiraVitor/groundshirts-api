@@ -1,11 +1,17 @@
 import { FastifyInstance } from "fastify";
-import { createNewProduct, getProduct, listProducts, updateExistingProduct } from "../controllers/products.controller";
+import {
+  createNewProduct,
+  deleteExistingProduct,
+  getProduct,
+  listProducts,
+  updateExistingProduct,
+} from "../controllers/products.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { CreateProduct, UpdateProduct } from "../types";
 
 export default async function productRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", authenticate);
-  
+
   fastify.get(
     "/",
     {
@@ -197,12 +203,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
             active: { type: "boolean" },
             categoryId: { type: "number" },
           },
-          required: [
-            "name",
-            "description",
-            "price",
-            "categoryId",
-          ],
+          required: ["name", "description", "price", "categoryId"],
         },
         response: {
           201: {
@@ -329,5 +330,54 @@ export default async function productRoutes(fastify: FastifyInstance) {
       },
     },
     updateExistingProduct,
+  );
+
+  fastify.delete<{ Params: { id: string } }>(
+    "/:id",
+    {
+      // onRequest: [requireAdmin],
+      schema: {
+        tags: ["Products"],
+        description: "Desativa um produto pelo ID",
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "ID do produto" },
+          },
+          required: ["id"],
+        },
+        response: {
+          200: {
+            description: "Produto desativado com sucesso",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          400: {
+            description: "Requisição inválida",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          404: {
+            description: "Produto não encontrado",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          500: {
+            description: "Erro interno do servidor",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    deleteExistingProduct,
   );
 }
