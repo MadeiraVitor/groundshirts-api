@@ -6,6 +6,7 @@ export const getProducts = async (filter: ProductFilters) => {
     minPrice,
     maxPrice,
     search,
+    categoryId,
     sortBy,
     sortOrder,
     page = 1,
@@ -13,6 +14,11 @@ export const getProducts = async (filter: ProductFilters) => {
   } = filter;
 
   const where: any = {};
+
+   // Filtro por categoria
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
 
   // Filtro por preço
   if (minPrice !== undefined || maxPrice !== undefined) {
