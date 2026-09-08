@@ -1,4 +1,4 @@
-# PRD — API Backend para Syntax Wear
+# PRD — API Backend para GroundShirts
 
 Última atualização: 25 de novembro de 2025
 
