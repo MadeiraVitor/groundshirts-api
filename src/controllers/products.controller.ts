@@ -25,10 +25,10 @@ export const listProducts = async (
 };
 
 export const getProduct = async (
-  request: FastifyRequest<{ Params: { id: number } }>,
+  request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply,
 ) => {
-  const product = await getProductById(request.params.id);
+  const product = await getProductById(Number(request.params.id));
   reply.status(200).send(product);
 };
 

@@ -15,7 +15,7 @@ export const getProducts = async (filter: ProductFilters) => {
 
   const where: any = {};
 
-   // Filtro por categoria
+  // Filtro por categoria
   if (categoryId) {
     where.categoryId = categoryId;
   }
@@ -67,6 +67,9 @@ export const getProducts = async (filter: ProductFilters) => {
         orderBy: Object.keys(orderBy).length > 0 ? orderBy : undefined,
         skip,
         take,
+        include: {
+          category: true,
+        },
       }),
       prisma.product.count({ where }),
     ]);
@@ -85,20 +88,18 @@ export const getProducts = async (filter: ProductFilters) => {
 };
 
 export const getProductById = async (id: number) => {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { id },
-    });
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      category: true,
+    },
+  });
 
-    if (!product) {
-      throw new Error("Produto não encontrado");
-    }
-
-    return product;
-  } catch (error) {
-    console.error("Erro ao buscar produto por ID:", error);
-    throw error;
+  if (!product) {
+    throw new Error("Produto não encontrado");
   }
+
+  return product;
 };
 
 export const createProduct = async (data: CreateProduct) => {
