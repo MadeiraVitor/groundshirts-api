@@ -55,3 +55,9 @@ export const updateProductSchema = z.object({
 export const deleteProductSchema = z.object({
   id: z.number().int().min(1, "ID é obrigatório"),
 });
+
+export const categoryFiltersSchema = z.object({
+  page: z.coerce.number().int().min(1, "Page deve ser >= 1").optional(),
+  limit: z.coerce.number().int().min(1, "Limit deve ser >= 1").optional(),
+  search: z.string().trim().min(1, "Search não pode ser vazio").optional(),
+});
