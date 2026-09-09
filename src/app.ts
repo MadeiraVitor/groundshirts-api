@@ -8,6 +8,7 @@ import jwt from "@fastify/jwt";
 import authRoutes from "./routes/auth.routes";
 import { errorHandler } from "./middlewares/error.middleware";
 import categoryRoutes from "./routes/categories.routes";
+import orderRoutes from "./routes/orders.routes";
 
 const fastify = Fastify({
   logger: true,
@@ -63,6 +64,7 @@ fastify.register(scalar, {
 fastify.register(productRoutes, { prefix: "/products" });
 fastify.register(categoryRoutes, { prefix: "/categories" });
 fastify.register(authRoutes, { prefix: "/auth" });
+fastify.register(orderRoutes, { prefix: "/orders" });
 
 // Declare a route
 fastify.get("/", async (request, reply) => {
