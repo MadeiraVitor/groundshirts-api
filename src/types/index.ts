@@ -60,3 +60,41 @@ export interface UpdateCategory extends Partial<CreateCategory> {
   slug?: string;
   active?: boolean;
 }
+
+export interface OrderFilters {
+  page?: number;
+  limit?: number;
+  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  userId?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CreateOrder {
+  userId?: number;
+  items: CreateOrderItem[];
+  shippingAddress: ShippingAddress;
+  paymentMethod: string;
+}
+
+export interface UpdateOrder {
+  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  shippingAddress?: ShippingAddress;
+}
+
+export interface ShippingAddress {
+  cep: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
+export interface CreateOrderItem {
+  productId: number;
+  quantity: number;
+  size?: string;
+}
