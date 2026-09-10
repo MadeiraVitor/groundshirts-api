@@ -1,6 +1,8 @@
-import Fastify, { FastifyError } from "fastify";
-import cors from "@fastify/cors";
-import helmet from "@fastify/helmet";
+import Fastify, { type FastifyInstance } from "fastify";
+import "dotenv/config";
+import fastifyCors from "@fastify/cors";
+import fastifyCsrf from "@fastify/csrf-protection";
+import fastifyHelmet from "@fastify/helmet";
 import productRoutes from "./routes/products.routes";
 import swagger from "@fastify/swagger";
 import scalar from "@scalar/fastify-api-reference";
@@ -9,88 +11,104 @@ import authRoutes from "./routes/auth.routes";
 import { errorHandler } from "./middlewares/error.middleware";
 import categoryRoutes from "./routes/categories.routes";
 import orderRoutes from "./routes/orders.routes";
+import fastifyCookie from "@fastify/cookie";
 
-const fastify = Fastify({
-  logger: true,
-});
+const PORT = parseInt(process.env.PORT ?? "3000");
 
-fastify.register(jwt, {
-  secret: process.env.JWT_SECRET!,
-});
-
-fastify.register(cors, {
-  origin: true,
-  credentials: true,
-});
-
-fastify.register(helmet, {
-  contentSecurityPolicy: false,
-});
-
-fastify.register(swagger, {
-  openapi: {
-    openapi: "3.0.0",
-    info: {
-      title: "GroundShirts API",
-      description: "API para o e-commerce GroundShirts",
-      version: "1.0.0",
-    },
-    servers: [
-      {
-        url: "http://localhost:3000",
-        description: "Servidor local de desenvolvimento",
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-          description: "Autenticação via token JWT",
+export async function buildApp(): Promise<FastifyInstance> {
+  const fastify = Fastify({
+    logger: {
+      level: process.env.LOG_LEVEL || "info",
+      serializers: {
+        req(request) {
+          return {
+            method: request.method,
+            url: request.url,
+          };
+        },
+        res(reply) {
+          return {
+            statusCode: reply.statusCode,
+          };
         },
       },
     },
-  },
-});
+  });
 
-fastify.register(scalar, {
-  routePrefix: "/docs",
-  configuration: {
-    theme: "dark",
-  },
-});
+  fastify.register(fastifyCookie);
 
-fastify.register(productRoutes, { prefix: "/products" });
-fastify.register(categoryRoutes, { prefix: "/categories" });
-fastify.register(authRoutes, { prefix: "/auth" });
-fastify.register(orderRoutes, { prefix: "/orders" });
+  fastify.register(jwt, {
+    secret: process.env.JWT_SECRET!,
+    cookie: {
+      cookieName: "groundshirts.token",
+      signed: false,
+    },
+  });
 
-// Declare a route
-fastify.get("/", async (request, reply) => {
-  return {
-    message: "E-commerce GroundShirts API",
-    version: "1.0.0",
-    status: "running",
-  };
-});
+  fastify.register(fastifyCors, {
+    origin: true,
+    credentials: true,
+  });
 
-fastify.get("/health", async (request, reply) => {
-  return {
-    status: "ok",
-    timestamp: new Date().toISOString(),
-  };
-});
+  fastify.register(fastifyCsrf);
 
-fastify.setErrorHandler(errorHandler);
+  fastify.register(fastifyHelmet, {
+    contentSecurityPolicy: false,
+  });
 
-// Run the server!
-fastify.listen({ port: 3000 }, function (err, address) {
-  if (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
-  // Server is now listening on ${address}
-});
+  fastify.register(swagger, {
+    openapi: {
+      openapi: "3.0.0",
+      info: {
+        title: "E-commerce Groundshirts API",
+        description: "API para o e-commerce Groundshirts",
+        version: "1.0.0",
+      },
+      servers: [],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+            description: "Autenticação usando JSON Web Tokens (JWT)",
+          },
+        },
+      },
+    },
+  });
 
-export default fastify;
+  fastify.register(scalar, {
+    routePrefix: "/docs",
+    configuration: {
+      theme: "moon",
+    },
+  });
+
+  fastify.register(productRoutes, { prefix: "/products" });
+  fastify.register(categoryRoutes, { prefix: "/categories" });
+  fastify.register(authRoutes, { prefix: "/auth" });
+  fastify.register(orderRoutes, { prefix: "/orders" });
+
+  // Declare a route
+  fastify.get("/", async (request, reply) => {
+    return {
+      message: "E-commerce Groundshirts API",
+      version: "1.0.0",
+      status: "Running",
+    };
+  });
+
+  fastify.get("/health", async (request, reply) => {
+    return {
+      status: "OK",
+      timestamp: new Date().toISOString(),
+    };
+  });
+
+  fastify.setErrorHandler(errorHandler);
+
+  await fastify.ready();
+
+  return fastify;
+}
