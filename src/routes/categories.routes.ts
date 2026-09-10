@@ -7,7 +7,7 @@ import {
   listCategories,
   updateExistingCategory,
 } from "../controllers/categories.controller";
-// import { requireAdmin } from "../middlewares/admin.middleware";
+import { requireAdmin } from "../middlewares/admin.middleware";
 
 export default async function categoryRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -127,7 +127,7 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateCategory }>(
     "/",
     {
-      // onRequest: [requireAdmin],
+      onRequest: [requireAdmin],
       schema: {
         tags: ["Categories"],
         description: "Cria uma nova categoria",
@@ -178,7 +178,7 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
   fastify.put<{ Params: { id: string }; Body: UpdateCategory }>(
     "/:id",
     {
-      // onRequest: [requireAdmin],
+      onRequest: [requireAdmin],
       schema: {
         tags: ["Categories"],
         description: "Atualiza uma categoria pelo ID",
@@ -248,7 +248,7 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>(
     "/:id",
     {
-      // onRequest: [requireAdmin],
+      onRequest: [requireAdmin],
       schema: {
         tags: ["Categories"],
         description: "Desativa uma categoria pelo ID",
