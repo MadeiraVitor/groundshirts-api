@@ -15,13 +15,69 @@ export interface CategoryFilters {
   search?: string;
 }
 
+export interface OrderFilters {
+  page?: number;
+  limit?: number;
+  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  userId?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ShippingAddress {
+  cep: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
+export interface CreateOrderItem {
+  productId: number;
+  quantity: number;
+  size?: string;
+}
+
+export interface CreateOrder {
+  userId?: number;
+  items: CreateOrderItem[];
+  shippingAddress: ShippingAddress;
+  paymentMethod: string;
+}
+
+export interface UpdateOrder {
+  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  shippingAddress?: ShippingAddress;
+}
+
+export interface CreateCategory {
+  name: string;
+  description?: string;
+  slug: string;
+  active: boolean;
+}
+
+export interface UpdateCategory extends Partial<CreateCategory> {
+  name?: string;
+  description?: string;
+  slug?: string;
+  active?: boolean;
+}
+
 export interface AuthRequest {
   email: string;
   password: string;
 }
 
 export interface RegisterRequest extends AuthRequest {
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  cpf?: string | undefined;
+  birthDate?: string | undefined;
+  phone?: string | undefined;
   role?: "USER" | "ADMIN";
 }
 
@@ -45,56 +101,4 @@ export interface UpdateProduct extends Partial<CreateProduct> {
   slug?: string;
   stock?: number;
   active?: boolean;
-}
-
-export interface CreateCategory {
-  name: string;
-  description?: string;
-  slug: string;
-  active: boolean;
-}
-
-export interface UpdateCategory extends Partial<CreateCategory> {
-  name?: string;
-  description?: string;
-  slug?: string;
-  active?: boolean;
-}
-
-export interface OrderFilters {
-  page?: number;
-  limit?: number;
-  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
-  userId?: number;
-  startDate?: string;
-  endDate?: string;
-}
-
-export interface CreateOrder {
-  userId?: number;
-  items: CreateOrderItem[];
-  shippingAddress: ShippingAddress;
-  paymentMethod: string;
-}
-
-export interface UpdateOrder {
-  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
-  shippingAddress?: ShippingAddress;
-}
-
-export interface ShippingAddress {
-  cep: string;
-  street: string;
-  number: string;
-  complement?: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  country: string;
-}
-
-export interface CreateOrderItem {
-  productId: number;
-  quantity: number;
-  size?: string;
 }
