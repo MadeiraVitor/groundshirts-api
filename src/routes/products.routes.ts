@@ -7,7 +7,7 @@ import {
   updateExistingProduct,
 } from "../controllers/products.controller";
 import { CreateProduct, UpdateProduct } from "../types";
-// import { requireAdmin } from "../middlewares/admin.middleware";
+import { requireAdmin } from "../middlewares/admin.middleware";
 
 export default async function productRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -175,7 +175,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateProduct }>(
     "/",
     {
-      // onRequest: [requireAdmin],
+      onRequest: [requireAdmin],
       schema: {
         tags: ["Products"],
         description: "Cria um novo produto",
@@ -234,7 +234,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.put<{ Params: { id: string }; Body: UpdateProduct }>(
     "/:id",
     {
-      // onRequest: [requireAdmin],
+      onRequest: [requireAdmin],
       schema: {
         tags: ["Products"],
         description: "Atualiza um produto pelo ID",
@@ -333,7 +333,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>(
     "/:id",
     {
-      // onRequest: [requireAdmin],
+      onRequest: [requireAdmin],
       schema: {
         tags: ["Products"],
         description: "Desativa um produto pelo ID",
