@@ -2,13 +2,17 @@ import z from "zod";
 
 export const loginSchema = z.object({
   email: z.email("Email inválido"),
-  password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
 export const registerSchema = z.object({
-  fullName: z.string().min(1, "Nome é obrigatório"),
+  firstName: z.string().min(1, "Primeiro nome é obrigatório"),
+  lastName: z.string().min(1, "Sobrenome é obrigatório"),
   email: z.email("Email inválido"),
-  password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  cpf: z.string().optional(),
+  birthDate: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 export const productFiltersSchema = z.object({
@@ -24,6 +28,78 @@ export const productFiltersSchema = z.object({
     .optional(),
   sortBy: z.enum(["price", "name", "createdAt"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
+});
+
+export const categoryFiltersSchema = z.object({
+  page: z.coerce.number().int().min(1, "Page deve ser >= 1").optional(),
+  limit: z.coerce.number().int().min(1, "Limit deve ser >= 1").optional(),
+  search: z.string().trim().min(1, "Search não pode ser vazio").optional(),
+});
+
+export const orderFiltersSchema = z.object({
+  page: z.coerce.number().int().min(1, "Page deve ser >= 1").optional(),
+  limit: z.coerce.number().int().min(1, "Limit deve ser >= 1").optional(),
+  status: z
+    .enum(["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"])
+    .optional(),
+  userId: z.coerce.number().int().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+const shippingAddressSchema = z.object({
+  cep: z.string().regex(/^\d{8}$/, "CEP deve ter 8 dígitos"),
+  street: z.string().min(1, "Rua é obrigatória"),
+  number: z.string().min(1, "Número é obrigatório"),
+  complement: z.string().optional(),
+  neighborhood: z.string().min(1, "Bairro é obrigatório"),
+  city: z.string().min(1, "Cidade é obrigatória"),
+  state: z.string().length(2, "Estado deve ter 2 caracteres"),
+  country: z.string().default("BR"),
+});
+
+export const createOrderItemSchema = z.object({
+  productId: z.number().int().min(1, "ID do produto inválido"),
+  quantity: z.number().int().min(1, "Quantidade deve ser no mínimo 1"),
+  size: z.string().optional(),
+});
+
+export const createOrderSchema = z.object({
+  userId: z.number().int().optional(),
+  items: z
+    .array(createOrderItemSchema)
+    .min(1, "Pedido deve ter pelo menos um item"),
+  shippingAddress: shippingAddressSchema,
+  paymentMethod: z.string().min(1, "Método de pagamento é obrigatório"),
+});
+
+export const updateOrderSchema = z.object({
+  status: z
+    .enum(["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"])
+    .optional(),
+  shippingAddress: shippingAddressSchema.optional(),
+});
+
+export const deleteOrderSchema = z.object({
+  id: z.number().int().min(1, "ID é obrigatório"),
+});
+
+export const createCategorySchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  description: z.string().optional(),
+  slug: z.string().min(1, "Slug é obrigatório"),
+  active: z.boolean(),
+});
+
+export const updateCategorySchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  slug: z.string().optional(),
+  active: z.boolean().optional(),
+});
+
+export const deleteCategorySchema = z.object({
+  id: z.number().int().min(1, "ID é obrigatório"),
 });
 
 export const createProductSchema = z.object({
@@ -54,76 +130,4 @@ export const updateProductSchema = z.object({
 
 export const deleteProductSchema = z.object({
   id: z.number().int().min(1, "ID é obrigatório"),
-});
-
-export const categoryFiltersSchema = z.object({
-  page: z.coerce.number().int().min(1, "Page deve ser >= 1").optional(),
-  limit: z.coerce.number().int().min(1, "Limit deve ser >= 1").optional(),
-  search: z.string().trim().min(1, "Search não pode ser vazio").optional(),
-});
-
-export const createCategorySchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  description: z.string().optional(),
-  slug: z.string().min(1, "Slug é obrigatório"),
-  active: z.boolean(),
-});
-
-export const updateCategorySchema = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  slug: z.string().optional(),
-  active: z.boolean().optional(),
-});
-
-export const deleteCategorySchema = z.object({
-  id: z.number().int().min(1, "ID é obrigatório"),
-});
-
-export const orderFiltersSchema = z.object({
-  page: z.coerce.number().int().min(1, "Page deve ser >= 1").optional(),
-  limit: z.coerce.number().int().min(1, "Limit deve ser >= 1").optional(),
-  status: z
-    .enum(["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"])
-    .optional(),
-  userId: z.coerce.number().int().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
-
-export const createOrderItemSchema = z.object({
-  productId: z.number().int().min(1, "ID do produto inválido"),
-  quantity: z.number().int().min(1, "Quantidade deve ser no mínimo 1"),
-  size: z.string().optional(),
-});
-
-const shippingAddressSchema = z.object({
-  cep: z.string().regex(/^\d{8}$/, "CEP deve ter 8 dígitos"),
-  street: z.string().min(1, "Rua é obrigatória"),
-  number: z.string().min(1, "Número é obrigatório"),
-  complement: z.string().optional(),
-  neighborhood: z.string().min(1, "Bairro é obrigatório"),
-  city: z.string().min(1, "Cidade é obrigatória"),
-  state: z.string().length(2, "Estado deve ter 2 caracteres"),
-  country: z.string().default("BR"),
-});
-
-export const createOrderSchema = z.object({
-  userId: z.number().int().optional(),
-  items: z
-    .array(createOrderItemSchema)
-    .min(1, "Pedido deve ter pelo menos um item"),
-  shippingAddress: shippingAddressSchema,
-  paymentMethod: z.string().min(1, "Método de pagamento é obrigatório"),
-});
-
-export const deleteOrderSchema = z.object({
-  id: z.number().int().min(1, "ID é obrigatório"),
-});
-
-export const updateOrderSchema = z.object({
-  status: z
-    .enum(["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"])
-    .optional(),
-  shippingAddress: shippingAddressSchema.optional(),
 });
