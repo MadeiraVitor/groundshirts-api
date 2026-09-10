@@ -1,4 +1,4 @@
-import { FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import z, { ZodError } from "zod";
 
 export const errorHandler = (
@@ -22,6 +22,6 @@ export const errorHandler = (
 
   return reply.status(500).send({
     message: "Erro interno do servidor",
-    error: error.message,
+    debug: error.message,
   });
 };
