@@ -1,5 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { login, register } from "../controllers/auth.controller";
+import {
+  login,
+  register,
+  profile,
+  signOut,
+} from "../controllers/auth.controller";
+import { authenticate } from "../middlewares/auth.middleware";
 
 export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
@@ -51,5 +57,31 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
     login,
+  );
+
+  fastify.get(
+    "/profile",
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ["Auth"],
+        description: "Retorna o perfil do usuário autenticado",
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    profile,
+  );
+
+  fastify.post(
+    "/signout",
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ["Auth"],
+        description: "Faz logout do usuário removendo o cookie JWT",
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    signOut,
   );
 }

@@ -34,21 +34,21 @@ export const registerUser = async (
   return userWithoutPassword;
 };
 
-export const loginUser = async (data: AuthRequest) => {
+export const loginUser = async (data: AuthRequest, reply: FastifyReply) => {
   const user = await prisma.user.findUnique({
-    where: {
-      email: data.email,
-    },
+    where: { email: data.email },
   });
 
   if (!user) {
-    throw new Error("Usuário não encontrado");
+    reply.status(409).send({ message: "As credenciais estão incorretas" });
+    return;
   }
 
-  const isValidPassword = await bcrypt.compare(data.password, user.password);
+  const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
-  if (!isValidPassword) {
-    throw new Error("Senha incorreta");
+  if (!isPasswordValid) {
+    reply.status(409).send({ message: "As credenciais estão incorretas" });
+    return;
   }
 
   const { password, ...userWithoutPassword } = user;
