@@ -6,13 +6,9 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  firstName: z.string().min(1, "Primeiro nome é obrigatório"),
-  lastName: z.string().min(1, "Sobrenome é obrigatório"),
+  fullName: z.string().min(1, "Nome completo é obrigatório"),
   email: z.email("Email inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-  cpf: z.string().optional(),
-  birthDate: z.string().optional(),
-  phone: z.string().optional(),
 });
 
 export const productFiltersSchema = z.object({
