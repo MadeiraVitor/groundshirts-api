@@ -7,9 +7,9 @@ export const registerUser = async (
   payload: RegisterRequest,
   reply: FastifyReply,
 ) => {
-  const existingUser = await prisma.user.findFirst({
+  const existingUser = await prisma.user.findUnique({
     where: {
-      OR: [{ email: payload.email }],
+      email: payload.email
     },
   });
 
