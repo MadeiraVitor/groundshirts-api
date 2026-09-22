@@ -1,5 +1,7 @@
 import { prisma } from "../utils/prisma";
 import type { CreateOrder, OrderFilters, UpdateOrder } from "../types";
+import Decimal from "decimal.js";
+import { OrderStatus } from "../../generated/prisma/client";
 
 export const getOrders = async (filters: OrderFilters) => {
   const { status, userId, startDate, endDate, page = 1, limit = 10 } = filters;
@@ -85,98 +87,95 @@ export const getOrderById = async (
   return order;
 };
 
-export const createOrder = async (data: CreateOrder) => {
-  const productIds = data.items.map((item) => item.productId);
-
+export async function createOrder(data: CreateOrder) {
+  // 1. Buscar todos os produtos para validação
+  const productIds = data.items.map(item => item.productId)
   const products = await prisma.product.findMany({
-    where: {
-      id: { in: productIds },
-    },
-  });
+    where: { id: { in: productIds } },
+    include: { category: true },
+  })
 
-  const productById = new Map(products.map((product) => [product.id, product]));
+  // 2. Validar que todos os produtos existem
+  if (products.length !== productIds.length) {
+    const foundIds = products.map(p => p.id)
+    const missingIds = productIds.filter(id => !foundIds.includes(id))
+    throw new Error(`Produto(s) com ID ${missingIds.join(', ')} não encontrado(s)`)
+  }
 
-  const itemsWithSnapshot = data.items.map((item) => {
-    const product = productById.get(item.productId);
+  let total = new Decimal(0)
+  const orderItemsData = data.items.map((item) => {
+    const product = products.find(product => product.id === item.productId)!
 
-    if (!product) {
-      throw new Error(`Produto com ID ${item.productId} não encontrado`);
+    if (product?.stock < item.quantity) {
+      throw new Error(`Estoque insuficiente para o produto ${product.name}`)
     }
 
-    if (!product.active) {
-      throw new Error(`Produto ${product.name} está inativo`);
-    }
-
-    if (product.stock < item.quantity) {
-      throw new Error(
-        `Estoque insuficiente para ${product.name}. Disponível: ${product.stock}, solicitado: ${item.quantity}`,
-      );
-    }
-
-    const sizes = Array.isArray(product.sizes)
-      ? (product.sizes as string[])
-      : [];
-
-    if (sizes.length > 0 && !item.size) {
-      throw new Error(`Produto ${product.name} requer seleção de tamanho`);
-    }
-
-    if (item.size && sizes.length > 0 && !sizes.includes(item.size)) {
-      throw new Error(
-        `Tamanho ${item.size} não disponível para ${product.name}`,
-      );
-    }
+    const itemTotal = new Decimal(product.price).mul(item.quantity)
+    total = total.add(itemTotal)
 
     return {
-      item,
-      priceSnapshot: Number(product.price),
-    };
-  });
+      productId: product.id,
+      quantity: item.quantity,
+      price: product.price,
+      size: item.size
+    }
+  })
 
-  const total = itemsWithSnapshot.reduce(
-    (sum, current) => sum + current.priceSnapshot * current.item.quantity,
-    0,
-  );
+  const shippingCost = new Decimal(data.shippingCost || 0)
+  total = total.add(shippingCost)
 
+  // transação atômica
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
       data: {
         userId: data.userId,
         total,
-        status: "PENDING",
-        shippingAddress: data.shippingAddress as any,
+        status: OrderStatus.PENDING,
+        shippingAddress: JSON.parse(JSON.stringify(data.shippingAddress)),
+        shippingCost,
         paymentMethod: data.paymentMethod,
-      },
-    });
-
-    await Promise.all(
-      itemsWithSnapshot.map(({ item, priceSnapshot }) =>
-        tx.orderItem.create({
-          data: {
-            orderId: newOrder.id,
+        items: {
+          create: orderItemsData.map((item) => ({
             productId: item.productId,
-            price: priceSnapshot,
             quantity: item.quantity,
-            size: item.size,
-          },
-        }),
-      ),
-    );
+            price: item.price,
+            size: item.size
+          }))
+        }
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                images: true
+              }
+            }
+          }
+        }
+      }
+    })
 
-    await Promise.all(
-      itemsWithSnapshot.map(({ item }) =>
-        tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        }),
-      ),
-    );
+    for (const item of orderItemsData) {
+      await tx.product.update({
+        where: {
+          id: item.productId
+        },
+        data: {
+          stock: {
+            decrement: item.quantity
+          }
+        }
+      })
+    }
 
-    return newOrder;
-  });
+    return newOrder
+  })
 
-  return order;
-};
+  return order
+}
 
 export const updateOrder = async (
   id: number,
