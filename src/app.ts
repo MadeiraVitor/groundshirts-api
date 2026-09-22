@@ -12,6 +12,7 @@ import { errorHandler } from "./middlewares/error.middleware";
 import categoryRoutes from "./routes/categories.routes";
 import orderRoutes from "./routes/orders.routes";
 import fastifyCookie from "@fastify/cookie";
+import stripeRoutes from "./routes/stripe.routes";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
@@ -89,6 +90,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   fastify.register(categoryRoutes, { prefix: "/categories" });
   fastify.register(authRoutes, { prefix: "/auth" });
   fastify.register(orderRoutes, { prefix: "/orders" });
+  fastify.register(stripeRoutes, { prefix: "/stripe" });
 
   // Declare a route
   fastify.get("/", async (request, reply) => {
