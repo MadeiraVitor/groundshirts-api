@@ -46,12 +46,11 @@ export const orderFiltersSchema = z.object({
 const shippingAddressSchema = z.object({
   cep: z.string().min(8, "CEP deve ter 8 dígitos"),
   street: z.string().min(1, "Rua é obrigatória"),
-  number: z.string().min(1, "Número é obrigatório"),
+  number: z.coerce.number().min(1, "Número é obrigatório"),
   complement: z.string().optional(),
   neighborhood: z.string().min(1, "Bairro é obrigatório"),
   city: z.string().min(1, "Cidade é obrigatória"),
   state: z.string().length(2, "Estado deve ter 2 caracteres"),
-  country: z.string().default("BR"),
 });
 
 export const createOrderItemSchema = z.object({
