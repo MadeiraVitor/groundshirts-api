@@ -38,6 +38,8 @@ export const createStripeCheckoutService = async ({
       },
       quantity: product.quantity,
     })),
+    success_url: "http://localhost:5173/success",
+    cancel_url: "http://localhost:5173/cancel",
   });
 
   return {
