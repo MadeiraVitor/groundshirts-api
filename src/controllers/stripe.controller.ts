@@ -25,6 +25,7 @@ export class StripeController {
 
     const { sessionId } = await createStripeCheckoutService({
       products,
+      orderId: order.id,
     });
 
     return reply.status(200).send({ sessionId });

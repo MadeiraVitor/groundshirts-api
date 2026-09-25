@@ -10,11 +10,17 @@ interface OrderItems {
 
 interface CreateStripeCheckoutServiceRequest {
   products: OrderItems[];
+  orderId: number;
+}
+
+interface CreateStripeCheckoutResponse {
+  sessionId: string;
 }
 
 export const createStripeCheckoutService = async ({
   products,
-}: CreateStripeCheckoutServiceRequest) => {
+  orderId,
+}: CreateStripeCheckoutServiceRequest): Promise<CreateStripeCheckoutResponse> => {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error(
       "STRIPE_SECRET_KEY is not defined in the environment variables.",
@@ -28,6 +34,9 @@ export const createStripeCheckoutService = async ({
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
+    metadata: {
+      orderId,
+    },
     line_items: products.map((product) => ({
       price_data: {
         currency: "brl",
