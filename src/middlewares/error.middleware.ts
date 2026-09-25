@@ -21,7 +21,7 @@ export const errorHandler = (
   }
 
   return reply.status(500).send({
-    message: "Erro interno do servidor",
+    message: "Erro interno do servidor " + error,
     debug: error.message,
   });
 };
