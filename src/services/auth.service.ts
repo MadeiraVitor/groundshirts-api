@@ -1,22 +1,15 @@
-import { prisma } from "../utils/prisma";
-import type { AuthRequest, RegisterRequest } from "../types";
-import bcrypt from "bcrypt";
 import { FastifyReply } from "fastify";
+import type { AuthRequest, RegisterRequest } from "../types";
+import { prisma } from "../utils/prisma";
+import bcrypt from "bcrypt";
 
-export const registerUser = async (
-  payload: RegisterRequest,
-  reply: FastifyReply,
-) => {
+export const registerUser = async (payload: RegisterRequest) => {
   const existingUser = await prisma.user.findUnique({
-    where: {
-      email: payload.email
-    },
+    where: { email: payload.email },
   });
 
   if (existingUser) {
-    if (existingUser.email === payload.email) {
-      return reply.status(409).send({ message: "Email já está em uso" });
-    }
+    throw new Error("Email já cadastrado.");
   }
 
   const hashedPassword = await bcrypt.hash(payload.password, 10);
@@ -28,10 +21,16 @@ export const registerUser = async (
       password: hashedPassword,
       role: "USER",
     },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
   });
-  const { password, ...userWithoutPassword } = newUser;
 
-  return userWithoutPassword;
+  return newUser;
 };
 
 export const loginUser = async (data: AuthRequest, reply: FastifyReply) => {

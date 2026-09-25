@@ -1,32 +1,30 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import type { AuthRequest, RegisterRequest } from "../types";
 import { loginUser, registerUser } from "../services/auth.service";
+import type { AuthRequest, RegisterRequest } from "../types";
 import { loginSchema, registerSchema } from "../utils/validators";
 
 export const register = async (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => {
+  // Lógica de registro de usuário
+
   const validation = registerSchema.parse(request.body as RegisterRequest);
 
-  const user = await registerUser(validation, reply);
+  const user = await registerUser(validation);
 
-  const token = request.server.jwt.sign({ userId: user?.id });
-
-  reply.setCookie("groundshirts.token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24, // 1 dia
-  });
+  const token = request.server.jwt.sign({ userId: user.id });
 
   reply.status(201).send({
     user,
+    token,
   });
 };
 
-export const login = async (request: FastifyRequest, reply: FastifyReply) => {
+export const login = async (
+  request: FastifyRequest<{ Body: AuthRequest }>,
+  reply: FastifyReply,
+) => {
   const validation = loginSchema.parse(request.body as AuthRequest);
 
   const user = await loginUser(validation, reply);
@@ -35,12 +33,12 @@ export const login = async (request: FastifyRequest, reply: FastifyReply) => {
 
   const token = request.server.jwt.sign({ userId: user.id });
 
-  reply.setCookie("groundshirts.token", token, {
+  reply.setCookie("syntaxwear.token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24, // 1 dia
+    maxAge: 60 * 60 * 24,
   });
 
   reply.status(200).send({
