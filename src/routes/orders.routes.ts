@@ -7,7 +7,6 @@ import {
   updateExistingOrder,
 } from "../controllers/orders.controller";
 import { authenticate } from "../middlewares/auth.middleware";
-import { requireAdmin } from "../middlewares/admin.middleware";
 
 export default async function orderRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", authenticate);
@@ -17,26 +16,42 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Orders"],
-        description: "Lista pedidos com filtros opcionais",
+        description: "Listar pedidos com paginação e filtros",
         security: [{ bearerAuth: [] }],
         querystring: {
           type: "object",
           properties: {
-            page: { type: "number", description: "Página" },
-            limit: { type: "number", description: "Itens por página" },
+            page: {
+              type: "number",
+              description: "Número da página (padrão: 1)",
+            },
+            limit: {
+              type: "number",
+              description: "Limite de itens por página (padrão: 10)",
+            },
             status: {
               type: "string",
               enum: ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"],
-              description: "Status do pedido",
+              description: "Filtrar por status do pedido",
             },
-            userId: { type: "number", description: "ID do usuário" },
-            startDate: { type: "string", description: "Data inicial (ISO)" },
-            endDate: { type: "string", description: "Data final (ISO)" },
+            userId: {
+              type: "number",
+              description: "Filtrar por ID do usuário",
+            },
+            startDate: {
+              type: "string",
+              format: "date-time",
+              description: "Data inicial (ISO 8601)",
+            },
+            endDate: {
+              type: "string",
+              format: "date-time",
+              description: "Data final (ISO 8601)",
+            },
           },
         },
         response: {
           200: {
-            description: "Lista paginada de pedidos",
             type: "object",
             properties: {
               data: {
@@ -45,27 +60,16 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                   type: "object",
                   properties: {
                     id: { type: "number" },
-                    userId: { type: "number" },
+                    userId: { type: "number", nullable: true },
                     total: { type: "number" },
                     status: { type: "string" },
-                    shippingAddress: {
-                      type: "object",
-                      properties: {
-                        cep: { type: "string" },
-                        street: { type: "string" },
-                        number: { type: "string" },
-                        complement: { type: "string" },
-                        neighborhood: { type: "string" },
-                        city: { type: "string" },
-                        state: { type: "string" },
-                        country: { type: "string" },
-                      },
-                    },
+                    shippingAddress: { type: "object" },
                     paymentMethod: { type: "string" },
                     createdAt: { type: "string", format: "date-time" },
                     updatedAt: { type: "string", format: "date-time" },
                     user: {
                       type: "object",
+                      nullable: true,
                       properties: {
                         id: { type: "number" },
                         firstName: { type: "string" },
@@ -82,14 +86,17 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                           productId: { type: "number" },
                           price: { type: "number" },
                           quantity: { type: "number" },
-                          size: { type: "string" },
+                          size: { type: "string", nullable: true },
                           product: {
                             type: "object",
                             properties: {
                               id: { type: "number" },
                               name: { type: "string" },
-                              price: { type: "number" },
                               slug: { type: "string" },
+                              images: {
+                                type: "array",
+                                items: { type: "string" },
+                              },
                               category: {
                                 type: "object",
                                 properties: {
@@ -112,158 +119,48 @@ export default async function orderRoutes(fastify: FastifyInstance) {
               totalPages: { type: "number" },
             },
           },
-          400: {
-            description: "Requisição inválida",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          401: {
-            description: "Não autorizado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          500: {
-            description: "Erro interno do servidor",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
         },
       },
     },
     listOrders,
   );
 
-  fastify.delete(
+  fastify.get(
     "/:id",
     {
       schema: {
         tags: ["Orders"],
-        description: "Cancela um pedido pelo ID",
+        description: "Obter detalhes de um pedido específico",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["id"],
           properties: {
             id: { type: "number", description: "ID do pedido" },
-          },
-          required: ["id"],
-        },
-        response: {
-          200: {
-            description: "Pedido cancelado com sucesso",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          400: {
-            description: "Requisição inválida",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          401: {
-            description: "Não autorizado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          404: {
-            description: "Pedido não encontrado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          500: {
-            description: "Erro interno do servidor",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-    deleteExistingOrder,
-  );
-
-  fastify.put(
-    "/:id",
-    {
-      schema: {
-        tags: ["Orders"],
-        description: "Atualiza status ou endereço de entrega do pedido",
-        security: [{ bearerAuth: [] }],
-        onRequest: [requireAdmin],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "number", description: "ID do pedido" },
-          },
-          required: ["id"],
-        },
-        body: {
-          type: "object",
-          properties: {
-            status: {
-              type: "string",
-              enum: ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"],
-            },
-            shippingAddress: {
-              type: "object",
-              properties: {
-                cep: { type: "string" },
-                street: { type: "string" },
-                number: { type: "string" },
-                complement: { type: "string" },
-                neighborhood: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                country: { type: "string" },
-              },
-            },
           },
         },
         response: {
           200: {
-            description: "Pedido atualizado com sucesso",
             type: "object",
             properties: {
               id: { type: "number" },
-              userId: { type: "number" },
+              userId: { type: "number", nullable: true },
               total: { type: "number" },
               status: { type: "string" },
-              shippingAddress: {
-                type: "object",
-                properties: {
-                  cep: { type: "string" },
-                  street: { type: "string" },
-                  number: { type: "string" },
-                  complement: { type: "string" },
-                  neighborhood: { type: "string" },
-                  city: { type: "string" },
-                  state: { type: "string" },
-                  country: { type: "string" },
-                },
-              },
+              shippingAddress: { type: "object" },
               paymentMethod: { type: "string" },
               createdAt: { type: "string", format: "date-time" },
               updatedAt: { type: "string", format: "date-time" },
               user: {
                 type: "object",
+                nullable: true,
                 properties: {
                   id: { type: "number" },
                   firstName: { type: "string" },
                   lastName: { type: "string" },
                   email: { type: "string" },
+                  cpf: { type: "string", nullable: true },
+                  phone: { type: "string", nullable: true },
                 },
               },
               items: {
@@ -275,20 +172,27 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                     productId: { type: "number" },
                     price: { type: "number" },
                     quantity: { type: "number" },
-                    size: { type: "string" },
+                    size: { type: "string", nullable: true },
+                    createdAt: { type: "string", format: "date-time" },
                     product: {
                       type: "object",
                       properties: {
                         id: { type: "number" },
                         name: { type: "string" },
+                        description: { type: "string" },
                         price: { type: "number" },
                         slug: { type: "string" },
+                        stock: { type: "number" },
+                        colors: { type: "array", items: { type: "string" } },
+                        sizes: { type: "array", items: { type: "string" } },
+                        images: { type: "array", items: { type: "string" } },
                         category: {
                           type: "object",
                           properties: {
                             id: { type: "number" },
                             name: { type: "string" },
                             slug: { type: "string" },
+                            description: { type: "string", nullable: true },
                           },
                         },
                       },
@@ -298,29 +202,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
               },
             },
           },
-          400: {
-            description: "Requisição inválida",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          401: {
-            description: "Não autorizado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
           404: {
-            description: "Pedido não encontrado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          500: {
-            description: "Erro interno do servidor",
             type: "object",
             properties: {
               message: { type: "string" },
@@ -329,7 +211,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    updateExistingOrder,
+    getOrder,
   );
 
   fastify.post(
@@ -337,13 +219,17 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Orders"],
-        description: "Cria um novo pedido",
+        description:
+          "Criar novo pedido com validação de estoque e cálculo automático de total",
         security: [{ bearerAuth: [] }],
         body: {
           type: "object",
           required: ["items", "shippingAddress", "paymentMethod"],
           properties: {
-            userId: { type: "number" },
+            userId: {
+              type: "number",
+              description: "ID do usuário (opcional para guest checkout)",
+            },
             items: {
               type: "array",
               minItems: 1,
@@ -351,9 +237,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                 type: "object",
                 required: ["productId", "quantity"],
                 properties: {
-                  productId: { type: "number" },
-                  quantity: { type: "number" },
-                  size: { type: "string" },
+                  productId: { type: "number", description: "ID do produto" },
+                  quantity: { type: "number", description: "Quantidade" },
+                  size: {
+                    type: "string",
+                    description: "Tamanho (obrigatório se produto tiver sizes)",
+                  },
                 },
               },
             },
@@ -366,25 +255,33 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                 "neighborhood",
                 "city",
                 "state",
-                "country",
               ],
               properties: {
-                cep: { type: "string" },
-                street: { type: "string" },
-                number: { type: "string" },
-                complement: { type: "string" },
-                neighborhood: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                country: { type: "string" },
+                cep: { type: "string", description: "CEP com 8 dígitos" },
+                street: { type: "string", description: "Rua/Avenida" },
+                number: { type: "string", description: "Número" },
+                complement: {
+                  type: "string",
+                  description: "Complemento (opcional)",
+                },
+                neighborhood: { type: "string", description: "Bairro" },
+                city: { type: "string", description: "Cidade" },
+                state: { type: "string", description: "Estado (UF)" },
+                country: {
+                  type: "string",
+                  default: "BR",
+                  description: "País (padrão: BR)",
+                },
               },
             },
-            paymentMethod: { type: "string" },
+            paymentMethod: {
+              type: "string",
+              description: "Método de pagamento (ex: credit_card, pix, boleto)",
+            },
           },
         },
         response: {
           201: {
-            description: "Pedido criado com sucesso",
             type: "object",
             properties: {
               message: { type: "string" },
@@ -392,21 +289,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             },
           },
           400: {
-            description: "Requisição inválida",
             type: "object",
             properties: {
               message: { type: "string" },
             },
           },
-          401: {
-            description: "Não autorizado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          500: {
-            description: "Erro interno do servidor",
+          404: {
             type: "object",
             properties: {
               message: { type: "string" },
@@ -418,109 +306,59 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     createNewOrder,
   );
 
-  fastify.get(
+  fastify.put(
     "/:id",
     {
       schema: {
         tags: ["Orders"],
-        description: "Obtém um pedido pelo ID",
+        description:
+          "Atualizar status ou endereço de entrega do pedido (não permite alterar items)",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["id"],
           properties: {
             id: { type: "number", description: "ID do pedido" },
           },
-          required: ["id"],
+        },
+        body: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              enum: ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"],
+              description: "Novo status do pedido",
+            },
+            shippingAddress: {
+              type: "object",
+              properties: {
+                cep: { type: "string" },
+                street: { type: "string" },
+                number: { type: "string" },
+                complement: { type: "string" },
+                neighborhood: { type: "string" },
+                city: { type: "string" },
+                state: { type: "string" },
+                country: { type: "string", default: "BR" },
+              },
+            },
+          },
         },
         response: {
           200: {
-            description: "Pedido encontrado",
             type: "object",
             properties: {
               id: { type: "number" },
-              userId: { type: "number" },
+              userId: { type: "number", nullable: true },
               total: { type: "number" },
               status: { type: "string" },
-              shippingAddress: {
-                type: "object",
-                properties: {
-                  cep: { type: "string" },
-                  street: { type: "string" },
-                  number: { type: "string" },
-                  complement: { type: "string" },
-                  neighborhood: { type: "string" },
-                  city: { type: "string" },
-                  state: { type: "string" },
-                  country: { type: "string" },
-                },
-              },
+              shippingAddress: { type: "object" },
               paymentMethod: { type: "string" },
               createdAt: { type: "string", format: "date-time" },
               updatedAt: { type: "string", format: "date-time" },
-              user: {
-                type: "object",
-                properties: {
-                  id: { type: "number" },
-                  firstName: { type: "string" },
-                  lastName: { type: "string" },
-                  email: { type: "string" },
-                },
-              },
-              items: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "number" },
-                    productId: { type: "number" },
-                    price: { type: "number" },
-                    quantity: { type: "number" },
-                    size: { type: "string" },
-                    product: {
-                      type: "object",
-                      properties: {
-                        id: { type: "number" },
-                        name: { type: "string" },
-                        price: { type: "number" },
-                        slug: { type: "string" },
-                        category: {
-                          type: "object",
-                          properties: {
-                            id: { type: "number" },
-                            name: { type: "string" },
-                            slug: { type: "string" },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: {
-            description: "Requisição inválida",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          401: {
-            description: "Não autorizado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
             },
           },
           404: {
-            description: "Pedido não encontrado",
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          500: {
-            description: "Erro interno do servidor",
             type: "object",
             properties: {
               message: { type: "string" },
@@ -529,6 +367,46 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    getOrder,
+    updateExistingOrder,
+  );
+
+  fastify.delete(
+    "/:id",
+    {
+      schema: {
+        tags: ["Orders"],
+        description:
+          "Cancelar pedido (altera status para CANCELLED sem reversão de estoque)",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "number", description: "ID do pedido" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          400: {
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          404: {
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    deleteExistingOrder,
   );
 }

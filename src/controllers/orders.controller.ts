@@ -1,6 +1,10 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import {
+  createOrderSchema,
+  orderFiltersSchema,
+  updateOrderSchema,
+} from "../utils/validators";
 import type { CreateOrder, OrderFilters, UpdateOrder } from "../types";
-import { prisma } from "../utils/prisma";
 import {
   createOrder,
   deleteOrder,
@@ -8,95 +12,73 @@ import {
   getOrders,
   updateOrder,
 } from "../services/orders.service";
-import {
-  createOrderSchema,
-  deleteOrderSchema,
-  orderFiltersSchema,
-  updateOrderSchema,
-} from "../utils/validators";
 
-type JwtPayload = {
-  userId?: number;
-};
+export async function listOrders(request: FastifyRequest, reply: FastifyReply) {
+  const filters = orderFiltersSchema.parse(request.query as OrderFilters);
 
-const getUserContext = async (request: FastifyRequest) => {
-  const payload = (request as FastifyRequest & { user?: JwtPayload }).user;
-  const userId = payload?.userId;
+  const user = request.user as any;
+  const requestingUserId = user.userId;
 
-  if (!userId) {
-    throw new Error("Usuário não autenticado");
-  }
+  const orders = await getOrders(filters, requestingUserId);
+  reply.status(200).send(orders);
+}
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-
-  return {
-    userId,
-    isAdmin: user?.role === "ADMIN",
-  };
-};
-
-export const listOrders = async (
-  request: FastifyRequest<{ Querystring: OrderFilters }>,
-  reply: FastifyReply,
-) => {
-  const filters = orderFiltersSchema.parse(request.query);
-  const { userId, isAdmin } = await getUserContext(request);
-  const effectiveFilters: OrderFilters = {
-    ...filters,
-    userId: isAdmin ? filters.userId : userId,
-  };
-  const result = await getOrders(effectiveFilters);
-  reply.send(result);
-};
-
-export const getOrder = async (
+export async function getOrder(
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply,
-) => {
-  const { userId, isAdmin } = await getUserContext(request);
-  const order = await getOrderById(Number(request.params.id), userId, isAdmin);
+) {
+  const id = parseInt(request.params.id, 10);
+
+  // Extrair userId e role do token JWT
+  const user = request.user as any;
+  const requestingUserId = user.userId;
+  const isAdmin = user.role === "ADMIN";
+
+  const order = await getOrderById(id, requestingUserId, isAdmin);
   reply.status(200).send(order);
-};
+}
 
-export const createNewOrder = async (
-  request: FastifyRequest<{ Body: CreateOrder }>,
+export async function createNewOrder(
+  request: FastifyRequest,
   reply: FastifyReply,
-) => {
-  const body = request.body;
-  const validate = createOrderSchema.parse(body);
-  const order = await createOrder(validate);
+) {
+  const data = createOrderSchema.parse(request.body as CreateOrder);
+  const order = await createOrder(data);
+  reply.status(201).send({
+    message: "Pedido criado com sucesso",
+    orderId: order.id,
+  });
+}
 
-  reply
-    .status(201)
-    .send({ message: "Pedido criado com sucesso", orderId: order.id });
-};
-
-export const updateExistingOrder = async (
-  request: FastifyRequest<{ Params: { id: string }; Body: UpdateOrder }>,
+export async function updateExistingOrder(
+  request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply,
-) => {
-  const { id } = request.params;
-  const body = request.body;
-  const validate = updateOrderSchema.parse(body);
+) {
+  const id = parseInt(request.params.id, 10);
+  const data = updateOrderSchema.parse(request.body as UpdateOrder);
 
-  const { userId, isAdmin } = await getUserContext(request);
-  const order = await updateOrder(Number(id), validate, userId, isAdmin);
+  // Extrair userId e role do token JWT
+  const user = request.user as any;
+  const requestingUserId = user.userId;
+  const isAdmin = user.role === "ADMIN";
 
+  const order = await updateOrder(id, data, requestingUserId, isAdmin);
   reply.status(200).send(order);
-};
+}
 
-export const deleteExistingOrder = async (
-  request: FastifyRequest<{ Params: { id: number } }>,
+export async function deleteExistingOrder(
+  request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply,
-) => {
-  const { id } = request.params;
-  const validate = deleteOrderSchema.parse({ id });
+) {
+  const id = parseInt(request.params.id, 10);
 
-  const { userId, isAdmin } = await getUserContext(request);
-  await deleteOrder(validate.id, userId, isAdmin);
+  // Extrair userId e role do token JWT
+  const user = request.user as any;
+  const requestingUserId = user.userId;
+  const isAdmin = user.role === "ADMIN";
 
-  reply.status(200).send({ message: "Pedido cancelado com sucesso" });
-};
+  await deleteOrder(id, requestingUserId, isAdmin);
+  reply.status(200).send({
+    message: "Pedido deletado com sucesso",
+  });
+}
