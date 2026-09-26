@@ -33,7 +33,7 @@ export const login = async (
 
   const token = request.server.jwt.sign({ userId: user.id });
 
-  reply.setCookie("syntaxwear.token", token, {
+  reply.setCookie("groundshirts.token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
