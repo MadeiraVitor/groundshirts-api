@@ -31,6 +31,8 @@ API de e-commerce feita com Node.js, TypeScript, Fastify e Prisma, com persistê
 - Autenticação com registro/login e JWT
 - CRUD de produtos e categorias com desativação (soft delete)
 - CRUD de pedidos
+- Integração com Stripe Checkout para pagamentos com cartão
+- Webhook do Stripe para atualizar automaticamente o status do pedido
 - Documentação interativa em /docs
 
 ---
@@ -55,11 +57,13 @@ npm install
 # Use sua instancia PostgreSQL preferida
 ```
 
-4. Crie um arquivo `.env` na raiz com as variáveis `DATABASE_URL` e `JWT_SECRET`. Exemplo:
+4. Crie um arquivo `.env` na raiz com as variáveis `DATABASE_URL`, `JWT_SECRET`, `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET_KEY`. Exemplo:
 
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/db-name?schema=public
 JWT_SECRET=sua-chave-secreta
+STRIPE_SECRET_KEY=sua-chave-secreta-do-stripe
+STRIPE_WEBHOOK_SECRET_KEY=seu-segredo-do-webhook-do-stripe
 ```
 
 5. Rode as migrações do Prisma e gere o client:
@@ -79,6 +83,25 @@ Servidor: `http://localhost:3000`
 
 Scalar: `http://localhost:3000/docs`
 
+### Stripe
+
+O checkout cria o pedido na API e, em seguida, cria uma sessão do Stripe Checkout
+com os itens do pedido em reais (BRL). Atualmente, o checkout aceita pagamentos
+com cartão e retorna o `sessionId` que deve ser usado pelo frontend para abrir a
+página de pagamento do Stripe.
+
+O Stripe deve enviar os eventos para `POST /stripe/webhook`. A API valida a
+assinatura usando `STRIPE_WEBHOOK_SECRET_KEY` e atualiza o pedido relacionado
+ao evento:
+
+- `checkout.session.completed`: altera o status do pedido para `PAID`.
+- `charge.failed`: altera o status do pedido para `CANCELLED`.
+
+Para o webhook funcionar, configure no Stripe a URL pública
+`https://seu-dominio.com/stripe/webhook` e informe o segredo de assinatura no
+arquivo `.env`. Em desenvolvimento, use o Stripe CLI para
+encaminhar os eventos para o servidor local.
+
 ## 📌 Endpoints
 
 - `POST /auth/register`
@@ -87,10 +110,9 @@ Scalar: `http://localhost:3000/docs`
 
 ```
 {
-  "firstName": "Joao",
-  "lastName": "Silva",
+  "fullName": "Joao Silva",
   "email": "joao@email.com",
-  "password": "123456"
+  "password": "12345678"
 }
 ```
 
@@ -141,6 +163,42 @@ Scalar: `http://localhost:3000/docs`
 
 - `DELETE /orders/:id`
   - Cancela um pedido pelo ID.
+
+- `POST /stripe/checkout`
+  - Cria um pedido e uma sessão de pagamento no Stripe Checkout.
+  - Retorna `{ "sessionId": "..." }`.
+  - Corpo JSON esperado:
+
+```
+{
+  "userId": 1,
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "size": "M"
+    }
+  ],
+  "shippingAddress": {
+    "cep": "01001000",
+    "street": "Praca da Se",
+    "number": 1,
+    "complement": "Apto 10",
+    "neighborhood": "Se",
+    "city": "Sao Paulo",
+    "state": "SP"
+  },
+  "paymentMethod": "credit_card",
+  "shippingCost": 15
+}
+```
+
+- `userId` é opcional para checkout de convidado.
+- `size` é opcional quando o produto nao possui tamanhos.
+
+- `POST /stripe/webhook`
+  - Recebe eventos do Stripe e exige o cabecalho `stripe-signature`.
+  - Deve receber o corpo bruto da requisição para que a assinatura seja validada.
 
 ## 📚 Aprendizados
 
